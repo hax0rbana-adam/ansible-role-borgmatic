@@ -81,6 +81,25 @@
     private_key_format: ssh
   when: borgmatic_generate_keypair
 
+- name: Pulling pubkey from the server being backed up
+  ansible.builtin.slurp:
+    src: /root/.ssh/id_ed25519.pub
+  register: sshpubkey
+  when: borgmatic_push_public_key
+
+- name: Look up the home directory of the remote user on the backup server
+  ansible.builtin.user:
+    name: "{{ ansible_fqdn }}"
+  register: remote_user_info
+  when: borgmatic_push_public_key
+
+- name: Push pubkey to the backup server
+  delegate_to: "{{ borgmatic_backup_fqdn }}"
+  ansible.builtin.lineinfile:
+    path: "{{ remote_user_info.home }}/.ssh/authorized_keys"
+    line: "{{ sshpubkey['content'] | b64decode }}"
+  when: borgmatic_push_public_key
+
 # We don't want to just abort everything if the backup server is unavailable (rc == 255)
 - name: Making sure the target directory exists on the backup server
   ansible.builtin.shell:
