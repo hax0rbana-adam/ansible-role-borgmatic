@@ -100,6 +100,25 @@
     line: "{{ sshpubkey['content'] | b64decode }}"
   when: borgmatic_push_public_key
 
+- name: Pulling SSH host key from the backup server
+  delegate_to: "{{ borgmatic_backup_fqdn }}"
+  ansible.builtin.slurp:
+    src: /etc/ssh/ssh_host_ed25519_key.pub
+  register: sshhostkey
+  when: borgmatic_grab_known_hosts
+
+- name: Making sure there is a known_hosts file on the server being backed up
+  ansible.builtin.file:
+    path: "~/.ssh/known_hosts"
+    state: touch
+  when: borgmatic_grab_known_hosts
+
+- name: Tell the host about our servers it might want to ssh to
+  ansible.builtin.known_hosts:
+    name: "{{ borgmatic_backup_fqdn }}"
+    key: "{{ borgmatic_backup_fqdn }} {{ sshhostkey['content'] | b64decode | regex_replace('^(.*) .*$', '\\1') }}"
+  when: borgmatic_grab_known_hosts
+
 # We don't want to just abort everything if the backup server is unavailable (rc == 255)
 - name: Making sure the target directory exists on the backup server
   ansible.builtin.shell:
