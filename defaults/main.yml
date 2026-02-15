@@ -1,0 +1,47 @@
+borgmatic_backup_cadence: daily
+
+# Normally, we will want the machine being backed up to obtain an SSH user cert
+# using step (from smallstep). For computers with dynamic IP addresses, this
+# will not be possible, and other systems may just not yet have a PKI set up.
+# Those systems will need to set up SSH keys manually before using this role
+# and set obtain_ssh_user_cert to false.
+obtain_ssh_user_cert: true
+# The x509 directory is only used if obtain_ssh_user_cert is set to true
+# It needs to have an x.509 cert named fullchain.pem and key named privkey.pem
+borgmatic_x509_dir: /etc/borgmatic/certs
+
+# Normally we want to enable the borgmatic timer to automatically kick off
+# backups. The exception would be when we have set up backups, but not yet
+# restored our data. We don't want another backup to be made causing a restore
+# of the "latest" backup to be a blank slate.
+borgmatic_enable_timer: true
+borgmatic_backup_frequency: daily
+borgmatic_randomized_delay: 3h
+
+# By default, only backup the users' home directories. This should typically be
+# overridden to also backup any secrets that can't be put into the deployment
+# scripts.
+backup_directories:
+  - "/home"
+  - "/root"
+
+# backup_server should include the username
+backup_server: "{{ansible_fqdn}}@backup.{{ansible_domain}}"
+backup_destination: "ssh://{{backup_server}}/./borg-{{ansible_fqdn}}"
+repositories:
+  - "{{backup_destination}}"
+
+# Retention periods
+retention_daily: 14
+retention_monthly: 6
+retention_yearly: 2
+
+# Normally, if we're unable to SSH into the backup server to create a directory
+# to store our backups, the role will fail. This is a problem if you're setting
+# up backups on the first server you deploy, such as your PKI server, because
+# the backup server won't exist yet. Switching the flag below will ignore these
+# failures and continue under the assumption that the situation will be
+# rectified before it tries to do a backup. The typical use case here would be
+# to deploy your PKI server with this flag set to falues, and then immediately
+# deploy your backup server.
+borgmatic_allow_failures: false

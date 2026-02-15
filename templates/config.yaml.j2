@@ -1,0 +1,27 @@
+location:
+  source_directories:
+{% for dir in backup_directories  %}
+    - {{ dir }}
+{% endfor %}
+  repositories:
+{% for repo in repositories  %}
+    - {{ repo }}
+{% endfor %}
+
+{% if backup_postgresql_databases is defined %}
+# postgresql required the pg_dump_command, which is not in borgmatic 1.5.13,
+# which is in the Debian 11 repos. It works fine in borgmatic 1.7.7, which
+# is in the Debian 12 repos. In other words, if you are going to back up
+# postgresql databases, you better be on at least Debian 12.
+hooks:
+  postgresql_databases:
+{% for database in backup_postgresql_databases %}
+    - name: {{ database }}
+      pg_dump_command: sudo -u postgres pg_dump
+{% endfor %}
+{% endif %}
+
+retention:
+  keep_daily: {{retention_daily}}
+  keep_monthly: {{retention_monthly}}
+  keep_yearly: {{retention_yearly}}

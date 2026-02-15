@@ -1,0 +1,143 @@
+# This will set up a machine for using borgmatic (installation & configuration).
+#
+# Prerequisites:
+#   1. step needs to be installed and configured to connect to your PKI server
+#      (you can use the step-client role to do this)
+#   2. The target needs to have an X.509 cert in {{borgmatic_x509_dir}}, as
+#      that will be used to obtain a user SSH cert each time before doing a
+#      backup.
+#   3. The backup server's SSH host cert must be signed by the PKI server so
+#      the target can SSH into it without getting a host key verification
+#      warning that will prevent the SSH connection from happening.
+#      (this should have been done automatically when the backup server was
+#       deployed, but if not, emergency-sign-ssh-host-keys playbook can help)
+#   4. The backup server must have a user that matches the fqdn of the machine
+#      being backed up. This allows the target machine to SSH into the backup
+#      server. This can be done by the setup_users role which will add any
+#      users defined (typically in the host vars of the backup server).
+#
+# Variables:
+#   - borg_password: required unless BORG_PASSPHRASE has already been set in
+#                    /etc/borgmatic/env_vars by a previous setup process; the
+#                    password for the key file that will encrypt the backups.
+#                    If there's already a key on the backup server the password
+#                    needs to match.  This is usually set in the host_vars.
+#   - backup_directories: optional; a list of directories/files to backup
+#   - backup_server: optional; the server to send the backups
+#                    defaults to {{ansible_fqdn}}@backup.{{domain}}
+#   - retention_daily: optional; number of daily backups to keep; default: 14
+#   - retention_monthly: optional; number of monthly backups to keep; default: 6
+#   - retention_yearly: optional; number of yearly backups to keep; default: 2
+#
+# If a remote backup server is specified (as is the default), this role expects
+# passwordless SSH access to already be set up, as the user specified.
+#
+- name: Updating apt cache
+  ansible.builtin.apt:
+    update_cache: True
+  when: "ansible_os_family == 'Debian'"
+
+- name: Installing borgmatic
+  ansible.builtin.package:
+    name: borgmatic
+
+- name: Ensure there's a directory to store borgmatic configuration files
+  ansible.builtin.file:
+    path: /etc/borgmatic
+    state: directory
+
+- name: Create borgmatic configuration file
+  ansible.builtin.template:
+    src: templates/config.yaml.j2
+    dest: /etc/borgmatic/config.yaml
+
+- name: Copying over borg password
+  ansible.builtin.copy:
+    dest: /etc/borgmatic/env_vars
+    content: "BORG_PASSPHRASE={{borg_password}}\n"
+    mode: "600"
+  when: borg_password is defined
+
+- name: Trying to obtain an SSH user certificate to access the backup server
+  ansible.builtin.shell:
+    cmd: step ssh certificate {{ansible_fqdn}} /root/.ssh/id_ecdsa --x5c-cert {{borgmatic_x509_dir}}/fullchain.pem --x5c-key {{borgmatic_x509_dir}}/privkey.pem --no-agent --force --insecure --no-password
+  register: ssh_user_cert
+  failed_when: ssh_user_cert.rc != 0 and not borgmatic_allow_failures
+  when: 'obtain_ssh_user_cert and ":" in backup_destination'
+
+# We don't want to just abort everything if the backup server is unavailable (rc == 255)
+- name: Making sure the target directory exists on the backup server
+  ansible.builtin.shell:
+    cmd: ssh {{backup_server}} "mkdir -p borg-{{ansible_fqdn}}"
+  register: ssh
+  failed_when: ssh.rc != 0 and not borgmatic_allow_failures
+  # We want to try to connect to the backup server if:
+  # - there's a colon in the destination (indicating it's a remote location), and
+  # - Either...
+  #   - we did not want to get a SSH user cert (e.g. we already have one), or
+  #   - we wanted and were able to get a cert (the normal use case)
+  # - or we are allowing failures (e.g. we are setting up the PKI server itself)
+  when: '":" in backup_destination and (obtain_ssh_user_cert == false or obtain_ssh_user_cert and ssh_user_cert.rc == 0) or borgmatic_allow_failures'
+
+- name: Checking to see if we have a key to restore
+  ansible.builtin.stat:
+    path: key
+  register: pre_key
+
+- name: Obtain the (encrypted) borgmatic encryption key from the backup server if possible
+  ansible.builtin.shell:
+    cmd: scp {{backup_server}}:key .
+  when: 'not pre_key.stat.exists and ":" in backup_destination and ("skipped" not in ssh or not ssh.skipped) and ssh.rc != 255'
+  # a ssh.rc of 255 means backup server isn't available
+  failed_when: False
+
+- name: Checking to see if we have a key to restore now
+  ansible.builtin.stat:
+    path: key
+  register: key
+
+# We don't know if we need to import the key, but we know whether we have a key
+# to import and importing it multiple times doesn't cause any issues.
+- name: Restoring key from backups
+  ansible.builtin.shell:
+    cmd: borg key import {{backup_server}}:borg-{{ansible_fqdn}} key
+  when: key.stat.exists and ssh.rc != 255  # 255 means backup server isn't available
+
+# If we didn't have a key, and the backup server is available, generate a key now
+- name: Initializing borg backup if it wasn't already initialized
+  ansible.builtin.shell:
+    cmd: >
+      . /etc/borgmatic/env_vars; export BORG_PASSPHRASE;
+      borgmatic list || borgmatic -e repokey init
+  register: init
+  failed_when: init.rc != 0 and not borgmatic_allow_failures
+  when: not key.stat.exists and ("skipped" not in ssh or not ssh.skipped) and ssh.rc != 255  # 255 means backup server isn't available
+
+# Note: The key can not decrypt anything without the password, which is not
+#       stored on the backup server
+- name: Ensuring the key is backed up
+  ansible.builtin.shell:
+    cmd: >
+      . /etc/borgmatic/env_vars; export BORG_PASSPHRASE;
+      borg key export {{backup_destination}} key &&
+      scp key {{backup_server}}:key
+  register: scp
+  failed_when: scp.rc != 0 and not borgmatic_allow_failures
+  when: not key.stat.exists and ":" in backup_destination and ("skipped" not in ssh or not ssh.skipped) and ssh.rc != 255
+
+- name: Deploying the borgmatic service file
+  ansible.builtin.template:
+    src: templates/borgmatic.service
+    dest: /etc/systemd/system/borgmatic.service
+
+- name: Setting up the systemd timer
+  ansible.builtin.template:
+    src: templates/borgmatic.timer
+    dest: /etc/systemd/system/borgmatic.timer
+
+- name: Activating the systemd timer which calls the service
+  ansible.builtin.systemd:
+    daemon_reload: True
+    enabled: "{{borgmatic_enable_timer}}"
+    name: borgmatic.timer
+    state: started

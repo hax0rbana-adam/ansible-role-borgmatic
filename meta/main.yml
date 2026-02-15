@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  author: Adam
+  description: Borgmatic - Compressed, encrypted, de-duplicated backups
+  license: MIT
+  company: none
+  min_ansible_version: "2.10"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+  galaxy_tags:
+    - backup
+    - backups
+    - encryption
+  namespace: hax0rbana_adam
+  role_name: borgmatic
+
+dependencies: []
