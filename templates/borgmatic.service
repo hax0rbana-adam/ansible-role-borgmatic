@@ -17,7 +17,7 @@ LockPersonality=true
 # Certain borgmatic features like Healthchecks integration need MemoryDenyWriteExecute to be off.
 # But you can try setting it to "yes" for improved security if you don't use those features.
 MemoryDenyWriteExecute=no
-{% if backup_postgresql_databases is not defined %}
+{% if borgmatic_backup_postgresql_databases is not defined %}
 NoNewPrivileges=yes
 {% endif %}
 PrivateDevices=yes
@@ -46,7 +46,7 @@ ProtectSystem=full
 # ProtectHome=tmpfs
 # BindPaths=-/root/.cache/borg -/root/.config/borg -/root/.borgmatic
 
-{% if backup_postgresql_databases is not defined %}
+{% if borgmatic_backup_postgresql_databases is not defined %}
 # May interfere with running external programs within borgmatic hooks.
 CapabilityBoundingSet=CAP_DAC_READ_SEARCH CAP_NET_RAW
 {% endif %}

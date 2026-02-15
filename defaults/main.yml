@@ -10,6 +10,12 @@ borgmatic_obtain_ssh_user_cert: true
 # It needs to have an x.509 cert named fullchain.pem and key named privkey.pem
 borgmatic_x509_dir: /etc/borgmatic/certs
 
+# Options which are only typically used if you don't have a PKI setup
+borgmatic_create_remote_user: false
+borgmatic_generate_keypair: false
+borgmatic_grab_known_hosts: false
+borgmatic_push_public_key: false
+
 # Normally we want to enable the borgmatic timer to automatically kick off
 # backups. The exception would be when we have set up backups, but not yet
 # restored our data. We don't want another backup to be made causing a restore
@@ -24,6 +30,12 @@ borgmatic_randomized_delay: 3h
 borgmatic_backup_directories:
   - "/home"
   - "/root"
+# If you want to backup postgres databases, enter a list of database names
+# in the variable below.
+#borgmatic_backup_postgresql_databases:
+#  - wp_weblog
+#  - civicrm
+#  - inventory
 
 # borgmatic_backup_server should include the username
 borgmatic_backup_server: "{{ansible_fqdn}}@backup.{{ansible_domain}}"
