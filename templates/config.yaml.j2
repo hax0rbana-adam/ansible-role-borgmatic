@@ -3,7 +3,7 @@ location:
 {% for dir in borgmatic_backup_directories  %}
     - {{ dir }}
 {% endfor %}
-  borgmatic_repositories:
+  repositories:
 {% for repo in borgmatic_repositories  %}
     - {{ repo }}
 {% endfor %}
