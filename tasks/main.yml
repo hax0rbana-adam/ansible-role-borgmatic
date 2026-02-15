@@ -65,6 +65,13 @@
   failed_when: ssh_user_cert.rc != 0 and not borgmatic_allow_failures
   when: 'borgmatic_obtain_ssh_user_cert and ":" in borgmatic_backup_destination'
 
+# create the remote user
+- name: Adding user on the remote server
+  delegate_to: "{{ borgmatic_backup_fqdn }}"
+  ansible.builtin.user:
+    name: "{{ ansible_fqdn }}"
+  when: borgmatic_create_remote_user
+
 # We don't want to just abort everything if the backup server is unavailable (rc == 255)
 - name: Making sure the target directory exists on the backup server
   ansible.builtin.shell:
