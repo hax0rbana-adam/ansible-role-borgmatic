@@ -66,7 +66,7 @@ LogRateLimitIntervalSec=0
 # Delay start to prevent backups running during boot. Note that systemd-inhibit requires dbus and
 # dbus-user-session to be installed.
 ExecStartPre=sleep 1m
-{% if obtain_ssh_user_cert %}
+{% if borgmatic_obtain_ssh_user_cert %}
 ExecStart=step ssh certificate {{ansible_fqdn}} /root/.ssh/id_ecdsa --x5c-cert {{borgmatic_x509_dir}}/fullchain.pem --x5c-key {{borgmatic_x509_dir}}/privkey.pem --no-agent --force --insecure --no-password
 {% endif %}
 ExecStart=systemd-inhibit --who="borgmatic" --what="sleep:shutdown" --why="Prevent interrupting scheduled backup" /usr/bin/borgmatic --verbosity -1 --syslog-verbosity 1

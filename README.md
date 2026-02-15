@@ -33,7 +33,7 @@ backed up to trust SSH host keys which are signed by your PKI.
   become: true
   roles:
     - role: hax0rbana_adam.borgmatic
-      borg_password: "In real life, put your password in an Ansible vault, not your playbook"
+      borgmatic_borg_password: "In real life, put your password in an Ansible vault, not your playbook"
 ```
 
 Here's an example of doing the same on remote hosts (whatever it in your
@@ -47,13 +47,13 @@ server.
   remote_user: root
   roles:
     - role: hax0rbana_adam.borgmatic
-      borg_password: "In real life, put your password in an Ansible vault, not your playbook"
-      backup_server: merlin@backup.example.com
-      obtain_ssh_user_cert: false
-      create_remote_user: true
-      generate_keypair: true
-      grab_known_hosts: true
-      push_public_key: true
+      borgmatic_borg_password: "In real life, put your password in an Ansible vault, not your playbook"
+      borgmatic_backup_server: merlin@backup.example.com
+      borgmatic_obtain_ssh_user_cert: false
+      borgmatic_create_remote_user: true
+      borgmatic_generate_keypair: true
+      borgmatic_grab_known_hosts: true
+      borgmatic_push_public_key: true
 ```
 
 # Official repo location
