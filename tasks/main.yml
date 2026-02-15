@@ -72,6 +72,15 @@
     name: "{{ ansible_fqdn }}"
   when: borgmatic_create_remote_user
 
+- name: Regenerating SSH keypair if format or options mismatch
+  community.crypto.openssh_keypair:
+    backend: cryptography
+    path: /root/.ssh/id_ed25519
+    type: ed25519
+    regenerate: full_idempotence
+    private_key_format: ssh
+  when: borgmatic_generate_keypair
+
 # We don't want to just abort everything if the backup server is unavailable (rc == 255)
 - name: Making sure the target directory exists on the backup server
   ansible.builtin.shell:
