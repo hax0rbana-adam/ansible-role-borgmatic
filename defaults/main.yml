@@ -42,7 +42,8 @@ borgmatic_backup_fqdn: "backup.{{ ansible_domain }}"
 borgmatic_backup_server: "{{ ansible_fqdn }}@{{ borgmatic_backup_fqdn }}"
 borgmatic_backup_destination: "ssh://{{borgmatic_backup_server}}/./borg-{{ansible_fqdn}}"
 borgmatic_repositories:
-  - "{{borgmatic_backup_destination}}"
+  - path: "{{borgmatic_backup_destination}}"
+    label: primary
 
 # Retention periods
 borgmatic_retention_daily: 14

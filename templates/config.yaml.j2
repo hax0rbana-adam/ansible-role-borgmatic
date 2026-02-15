@@ -1,11 +1,11 @@
-location:
-  source_directories:
+source_directories:
 {% for dir in borgmatic_backup_directories  %}
-    - {{ dir }}
+  - {{ dir }}
 {% endfor %}
-  repositories:
+repositories:
 {% for repo in borgmatic_repositories  %}
-    - {{ repo }}
+  - path: {{ repo.path }}
+    label: {{ repo.label }}
 {% endfor %}
 
 {% if borgmatic_backup_postgresql_databases is defined %}
@@ -21,7 +21,6 @@ hooks:
 {% endfor %}
 {% endif %}
 
-retention:
-  keep_daily: {{borgmatic_retention_daily}}
-  keep_monthly: {{borgmatic_retention_monthly}}
-  keep_yearly: {{borgmatic_retention_yearly}}
+keep_daily: {{borgmatic_retention_daily}}
+keep_monthly: {{borgmatic_retention_monthly}}
+keep_yearly: {{borgmatic_retention_yearly}}
