@@ -61,12 +61,13 @@
   when: borgmatic_borg_password is defined
 
 - name: Trying to obtain an SSH user certificate to access the backup server
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: >
       step ssh certificate {{ ansible_fqdn }} /root/.ssh/id_ecdsa
       --x5c-cert {{ borgmatic_x509_dir }}/fullchain.pem --x5c-key {{ borgmatic_x509_dir }}/privkey.pem
       --no-agent --force --insecure --no-password
   register: ssh_user_cert
+  changed_when: true
   failed_when: ssh_user_cert.rc != 0 and not borgmatic_allow_failures
   when: 'borgmatic_obtain_ssh_user_cert and ":" in borgmatic_backup_destination'
 
@@ -130,9 +131,10 @@
 
 # We don't want to just abort everything if the backup server is unavailable (rc == 255)
 - name: Making sure the target directory exists on the backup server
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: ssh {{ borgmatic_backup_server }} "mkdir -p borg-{{ ansible_fqdn }}"
   register: ssh
+  changed_when: false
   failed_when: ssh.rc != 0 and not borgmatic_allow_failures
   # We want to try to connect to the backup server if:
   # - there's a colon in the destination (indicating it's a remote location), and
@@ -151,10 +153,11 @@
   register: pre_key
 
 - name: Obtain the (encrypted) borgmatic encryption key from the backup server if possible
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: scp {{ borgmatic_backup_server }}:key .
   when: 'not pre_key.stat.exists and ":" in borgmatic_backup_destination and ("skipped" not in ssh or not ssh.skipped) and ssh.rc != 255'
   # a ssh.rc of 255 means backup server isn't available
+  changed_when: true
   failed_when: false
 
 - name: Checking to see if we have a key to restore now
@@ -165,8 +168,9 @@
 # We don't know if we need to import the key, but we know whether we have a key
 # to import and importing it multiple times doesn't cause any issues.
 - name: Restoring key from backups
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: borg key import {{ borgmatic_backup_server }}:borg-{{ ansible_fqdn }} key
+  changed_when: true
   when: key.stat.exists and ssh.rc != 255  # 255 means backup server isn't available
 
 # If we didn't have a key, and the backup server is available, generate a key now
@@ -176,6 +180,7 @@
       . /etc/borgmatic/env_vars; export BORG_PASSPHRASE;
       borgmatic list || borgmatic -e repokey init
   register: init
+  changed_when: true
   failed_when: init.rc != 0 and not borgmatic_allow_failures
   when: not key.stat.exists and ("skipped" not in ssh or not ssh.skipped) and ssh.rc != 255  # 255 means backup server isn't available
 
@@ -188,6 +193,7 @@
       borg key export {{ borgmatic_backup_destination }} key &&
       scp key {{ borgmatic_backup_server }}:key
   register: scp
+  changed_when: false
   failed_when: scp.rc != 0 and not borgmatic_allow_failures
   when: not key.stat.exists and ":" in borgmatic_backup_destination and ("skipped" not in ssh or not ssh.skipped) and ssh.rc != 255
 
