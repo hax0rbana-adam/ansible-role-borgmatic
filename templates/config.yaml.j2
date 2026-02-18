@@ -1,7 +1,9 @@
+{% if borgmatic_backup_directories %}
 source_directories:
 {% for dir in borgmatic_backup_directories  %}
   - {{ dir }}
 {% endfor %}
+{% endif %}
 repositories:
 {% for repo in borgmatic_repositories  %}
   - path: {{ repo.path }}
