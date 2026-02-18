@@ -32,6 +32,7 @@ borgmatic_backup_directories:
   - "/root"
 # If you want to backup postgres databases, enter a list of database names
 # in the variable below.
+borgmatic_backup_postgresql_databases: []
 #borgmatic_backup_postgresql_databases:
 #  - wp_weblog
 #  - civicrm
