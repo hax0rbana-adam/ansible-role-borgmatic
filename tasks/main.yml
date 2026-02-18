@@ -106,6 +106,7 @@
     path: "{{ remote_user_info.home }}/.ssh/authorized_keys"
     line: "{{ sshpubkey['content'] | b64decode }}"
     create: true
+    owner: "{{ ansible_fqdn }}"
     mode: "600"
   when: borgmatic_push_public_key
 
