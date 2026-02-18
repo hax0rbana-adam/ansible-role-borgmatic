@@ -142,10 +142,9 @@
   #   - we did not want to get a SSH user cert (e.g. we already have one), or
   #   - we wanted and were able to get a cert (the normal use case)
   # - or we are allowing failures (e.g. we are setting up the PKI server itself)
-  when: >
-    ('":" in borgmatic_backup_destination
+  when: (":" in borgmatic_backup_destination
      and (not borgmatic_obtain_ssh_user_cert or borgmatic_obtain_ssh_user_cert and ssh_user_cert.rc == 0)
-     or borgmatic_allow_failures')
+     or borgmatic_allow_failures)
 
 - name: Checking to see if we have a key to restore
   ansible.builtin.stat:
