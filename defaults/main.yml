@@ -38,6 +38,13 @@ borgmatic_backup_postgresql_databases: []
 #  - civicrm
 #  - inventory
 
+# For mariadb databases, enter the databases to backup below.
+borgmatic_backup_mariadb_databases: []
+#borgmatic_backup_mariadb_databases:
+#  - name: foobar
+#    username: arnold
+#    password: "{{ application_mariadb_password }}"
+
 # borgmatic_backup_server should include the username
 borgmatic_backup_fqdn: "backup.{{ ansible_domain }}"
 borgmatic_backup_server: "{{ ansible_fqdn }}@{{ borgmatic_backup_fqdn }}"

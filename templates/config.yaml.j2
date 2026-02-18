@@ -21,6 +21,14 @@ hooks:
       pg_dump_command: sudo -u postgres pg_dump
 {% endfor %}
 {% endif %}
+{% if borgmatic_backup_mariadb_databases %}
+mariadb_databases:
+{% for db in borgmatic_backup_mariadb_databases %}
+  - name: {{ db.name }}
+{% if db.username is defined %}    username: {{ db.username }}{% endif %}
+{% if db.password is defined %}    password: {{ db.password }}{% endif %}
+{% endfor %}
+{% endif %}
 
 keep_daily: {{borgmatic_retention_daily}}
 keep_monthly: {{borgmatic_retention_monthly}}
