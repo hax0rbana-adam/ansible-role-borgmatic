@@ -34,7 +34,7 @@
 #
 - name: Updating apt cache
   ansible.builtin.apt:
-    update_cache: True
+    update_cache: true
   when: "ansible_os_family == 'Debian'"
 
 - name: Installing borgmatic
@@ -45,11 +45,13 @@
   ansible.builtin.file:
     path: /etc/borgmatic
     state: directory
+    mode: "755"
 
 - name: Create borgmatic configuration file
   ansible.builtin.template:
     src: templates/config.yaml.j2
     dest: /etc/borgmatic/config.yaml
+    mode: "644"
 
 - name: Copying over borg password
   ansible.builtin.copy:
@@ -60,7 +62,10 @@
 
 - name: Trying to obtain an SSH user certificate to access the backup server
   ansible.builtin.shell:
-    cmd: step ssh certificate {{ ansible_fqdn }} /root/.ssh/id_ecdsa --x5c-cert {{ borgmatic_x509_dir }}/fullchain.pem --x5c-key {{ borgmatic_x509_dir }}/privkey.pem --no-agent --force --insecure --no-password
+    cmd: >
+      step ssh certificate {{ ansible_fqdn }} /root/.ssh/id_ecdsa
+      --x5c-cert {{ borgmatic_x509_dir }}/fullchain.pem --x5c-key {{ borgmatic_x509_dir }}/privkey.pem
+      --no-agent --force --insecure --no-password
   register: ssh_user_cert
   failed_when: ssh_user_cert.rc != 0 and not borgmatic_allow_failures
   when: 'borgmatic_obtain_ssh_user_cert and ":" in borgmatic_backup_destination'
@@ -100,6 +105,7 @@
     path: "{{ remote_user_info.home }}/.ssh/authorized_keys"
     line: "{{ sshpubkey['content'] | b64decode }}"
     create: true
+    mode: "600"
   when: borgmatic_push_public_key
 
 - name: Pulling SSH host key from the backup server
@@ -113,6 +119,7 @@
   ansible.builtin.file:
     path: "~/.ssh/known_hosts"
     state: touch
+    mode: "600"
   when: borgmatic_grab_known_hosts
 
 - name: Tell the host about our servers it might want to ssh to
@@ -133,7 +140,10 @@
   #   - we did not want to get a SSH user cert (e.g. we already have one), or
   #   - we wanted and were able to get a cert (the normal use case)
   # - or we are allowing failures (e.g. we are setting up the PKI server itself)
-  when: '":" in borgmatic_backup_destination and (borgmatic_obtain_ssh_user_cert == false or borgmatic_obtain_ssh_user_cert and ssh_user_cert.rc == 0) or borgmatic_allow_failures'
+  when: >
+    ('":" in borgmatic_backup_destination
+     and (not borgmatic_obtain_ssh_user_cert or borgmatic_obtain_ssh_user_cert and ssh_user_cert.rc == 0)
+     or borgmatic_allow_failures')
 
 - name: Checking to see if we have a key to restore
   ansible.builtin.stat:
@@ -145,7 +155,7 @@
     cmd: scp {{ borgmatic_backup_server }}:key .
   when: 'not pre_key.stat.exists and ":" in borgmatic_backup_destination and ("skipped" not in ssh or not ssh.skipped) and ssh.rc != 255'
   # a ssh.rc of 255 means backup server isn't available
-  failed_when: False
+  failed_when: false
 
 - name: Checking to see if we have a key to restore now
   ansible.builtin.stat:
@@ -185,15 +195,17 @@
   ansible.builtin.template:
     src: templates/borgmatic.service
     dest: /etc/systemd/system/borgmatic.service
+    mode: "644"
 
 - name: Setting up the systemd timer
   ansible.builtin.template:
     src: templates/borgmatic.timer
     dest: /etc/systemd/system/borgmatic.timer
+    mode: "644"
 
 - name: Activating the systemd timer which calls the service
   ansible.builtin.systemd:
-    daemon_reload: True
+    daemon_reload: true
     enabled: "{{ borgmatic_enable_timer }}"
     name: borgmatic.timer
     state: started
