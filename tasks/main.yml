@@ -117,12 +117,18 @@
   register: sshhostkey
   when: borgmatic_grab_known_hosts
 
+- name: Checking to see if we have a known_hosts file on the server being backed up
+  ansible.builtin.stat:
+    path: "~/.ssh/known_hosts"
+  register: known_hosts
+  when: borgmatic_grab_known_hosts
+
 - name: Making sure there is a known_hosts file on the server being backed up
   ansible.builtin.file:
     path: "~/.ssh/known_hosts"
     state: touch
     mode: "600"
-  when: borgmatic_grab_known_hosts
+  when: borgmatic_grab_known_hosts and not known_hosts.stat.exists
 
 - name: Tell the host about our servers it might want to ssh to
   ansible.builtin.known_hosts:
