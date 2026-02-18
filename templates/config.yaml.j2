@@ -1,35 +1,41 @@
+location:
 {% if borgmatic_backup_directories %}
-source_directories:
+  source_directories:
 {% for dir in borgmatic_backup_directories  %}
-  - {{ dir }}
+    - {{ dir }}
 {% endfor %}
+{% else %}
+  source_directories: []
 {% endif %}
-repositories:
+  repositories:
 {% for repo in borgmatic_repositories  %}
-  - path: {{ repo.path }}
-    label: {{ repo.label }}
+    - {{ repo.path }}
 {% endfor %}
-{% if borgmatic_backup_postgresql_databases %}
+{% if borgmatic_backup_postgresql_databases or borgmatic_backup_mariadb_databases %}
 # postgresql required the pg_dump_command, which is not in borgmatic 1.5.13,
 # which is in the Debian 11 repos. It works fine in borgmatic 1.7.7, which
 # is in the Debian 12 repos. In other words, if you are going to back up
 # postgresql databases, you better be on at least Debian 12.
 hooks:
-  postgresql_databases:
+{% if borgmatic_backup_postgresql_databases %}  postgresql_databases:
+{% endif %}
 {% for database in borgmatic_backup_postgresql_databases %}
     - name: {{ database }}
       pg_dump_command: sudo -u postgres pg_dump
 {% endfor %}
 {% endif %}
 {% if borgmatic_backup_mariadb_databases %}
-mariadb_databases:
+  mysql_databases:
 {% for db in borgmatic_backup_mariadb_databases %}
-  - name: {{ db.name }}
-{% if db.username is defined %}    username: {{ db.username }}{% endif %}
-{% if db.password is defined %}    password: {{ db.password }}{% endif %}
+    - name: {{ db.name }}
+{% if db.username is defined %}      username: {{ db.username }}
+{% endif %}
+{% if db.password is defined %}      password: {{ db.password }}
+{% endif %}
 {% endfor %}
 {% endif %}
 
-keep_daily: {{borgmatic_retention_daily}}
-keep_monthly: {{borgmatic_retention_monthly}}
-keep_yearly: {{borgmatic_retention_yearly}}
+retention:
+  keep_daily: {{borgmatic_retention_daily}}
+  keep_monthly: {{borgmatic_retention_monthly}}
+  keep_yearly: {{borgmatic_retention_yearly}}
