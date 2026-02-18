@@ -33,24 +33,24 @@ borgmatic_backup_directories:
 # If you want to backup postgres databases, enter a list of database names
 # in the variable below.
 borgmatic_backup_postgresql_databases: []
-#borgmatic_backup_postgresql_databases:
-#  - wp_weblog
-#  - civicrm
-#  - inventory
+# borgmatic_backup_postgresql_databases:
+#   - wp_weblog
+#   - civicrm
+#   - inventory
 
 # For mariadb databases, enter the databases to backup below.
 borgmatic_backup_mariadb_databases: []
-#borgmatic_backup_mariadb_databases:
-#  - name: foobar
-#    username: arnold
-#    password: "{{ application_mariadb_password }}"
+# borgmatic_backup_mariadb_databases:
+#   - name: foobar
+#     username: arnold
+#     password: "{{ application_mariadb_password }}"
 
 # borgmatic_backup_server should include the username
 borgmatic_backup_fqdn: "backup.{{ ansible_domain }}"
 borgmatic_backup_server: "{{ ansible_fqdn }}@{{ borgmatic_backup_fqdn }}"
-borgmatic_backup_destination: "ssh://{{borgmatic_backup_server}}/./borg-{{ansible_fqdn}}"
+borgmatic_backup_destination: "ssh://{{ borgmatic_backup_server }}/./borg-{{ ansible_fqdn }}"
 borgmatic_repositories:
-  - path: "{{borgmatic_backup_destination}}"
+  - path: "{{ borgmatic_backup_destination }}"
     label: primary
 
 # Retention periods

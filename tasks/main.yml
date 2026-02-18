@@ -54,13 +54,13 @@
 - name: Copying over borg password
   ansible.builtin.copy:
     dest: /etc/borgmatic/env_vars
-    content: "BORG_PASSPHRASE={{borgmatic_borg_password}}\n"
+    content: "BORG_PASSPHRASE={{ borgmatic_borg_password }}\n"
     mode: "600"
   when: borgmatic_borg_password is defined
 
 - name: Trying to obtain an SSH user certificate to access the backup server
   ansible.builtin.shell:
-    cmd: step ssh certificate {{ansible_fqdn}} /root/.ssh/id_ecdsa --x5c-cert {{borgmatic_x509_dir}}/fullchain.pem --x5c-key {{borgmatic_x509_dir}}/privkey.pem --no-agent --force --insecure --no-password
+    cmd: step ssh certificate {{ ansible_fqdn }} /root/.ssh/id_ecdsa --x5c-cert {{ borgmatic_x509_dir }}/fullchain.pem --x5c-key {{ borgmatic_x509_dir }}/privkey.pem --no-agent --force --insecure --no-password
   register: ssh_user_cert
   failed_when: ssh_user_cert.rc != 0 and not borgmatic_allow_failures
   when: 'borgmatic_obtain_ssh_user_cert and ":" in borgmatic_backup_destination'
@@ -124,7 +124,7 @@
 # We don't want to just abort everything if the backup server is unavailable (rc == 255)
 - name: Making sure the target directory exists on the backup server
   ansible.builtin.shell:
-    cmd: ssh {{borgmatic_backup_server}} "mkdir -p borg-{{ansible_fqdn}}"
+    cmd: ssh {{ borgmatic_backup_server }} "mkdir -p borg-{{ ansible_fqdn }}"
   register: ssh
   failed_when: ssh.rc != 0 and not borgmatic_allow_failures
   # We want to try to connect to the backup server if:
@@ -142,7 +142,7 @@
 
 - name: Obtain the (encrypted) borgmatic encryption key from the backup server if possible
   ansible.builtin.shell:
-    cmd: scp {{borgmatic_backup_server}}:key .
+    cmd: scp {{ borgmatic_backup_server }}:key .
   when: 'not pre_key.stat.exists and ":" in borgmatic_backup_destination and ("skipped" not in ssh or not ssh.skipped) and ssh.rc != 255'
   # a ssh.rc of 255 means backup server isn't available
   failed_when: False
@@ -156,7 +156,7 @@
 # to import and importing it multiple times doesn't cause any issues.
 - name: Restoring key from backups
   ansible.builtin.shell:
-    cmd: borg key import {{borgmatic_backup_server}}:borg-{{ansible_fqdn}} key
+    cmd: borg key import {{ borgmatic_backup_server }}:borg-{{ ansible_fqdn }} key
   when: key.stat.exists and ssh.rc != 255  # 255 means backup server isn't available
 
 # If we didn't have a key, and the backup server is available, generate a key now
@@ -175,8 +175,8 @@
   ansible.builtin.shell:
     cmd: >
       . /etc/borgmatic/env_vars; export BORG_PASSPHRASE;
-      borg key export {{borgmatic_backup_destination}} key &&
-      scp key {{borgmatic_backup_server}}:key
+      borg key export {{ borgmatic_backup_destination }} key &&
+      scp key {{ borgmatic_backup_server }}:key
   register: scp
   failed_when: scp.rc != 0 and not borgmatic_allow_failures
   when: not key.stat.exists and ":" in borgmatic_backup_destination and ("skipped" not in ssh or not ssh.skipped) and ssh.rc != 255
@@ -194,6 +194,6 @@
 - name: Activating the systemd timer which calls the service
   ansible.builtin.systemd:
     daemon_reload: True
-    enabled: "{{borgmatic_enable_timer}}"
+    enabled: "{{ borgmatic_enable_timer }}"
     name: borgmatic.timer
     state: started
