@@ -171,13 +171,23 @@
     path: key
   register: key
 
-# We don't know if we need to import the key, but we know whether we have a key
-# to import and importing it multiple times doesn't cause any issues.
+# If we have ever taken any backups, we know the key has been imported
+- name: Checking to see if we need to restore the key from backups
+  ansible.builtin.shell:
+    cmd: >
+      . /etc/borgmatic/env_vars; export BORG_PASSPHRASE;
+      borg list {{ borgmatic_backup_destination }}
+  changed_when: false
+  register: borg_list
+  when: key.stat.exists and ssh.rc != 255  # 255 means backup server isn't available
+
 - name: Restoring key from backups
   ansible.builtin.command:
     cmd: borg key import {{ borgmatic_backup_server }}:borg-{{ ansible_fqdn }} key
   changed_when: true
-  when: key.stat.exists and ssh.rc != 255  # 255 means backup server isn't available
+  when: key.stat.exists and ssh.rc != 255 and borg_list.stdout == ''
+        # 255 means backup server isn't available
+        # if borg_list shows no backups, we almost certainly haven't imported the key
 
 # If we didn't have a key, and the backup server is available, generate a key now
 - name: Initializing borg backup if it wasn't already initialized
