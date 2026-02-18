@@ -88,6 +88,7 @@
   when: borgmatic_push_public_key
 
 - name: Look up the home directory of the remote user on the backup server
+  delegate_to: "{{ borgmatic_backup_fqdn }}"
   ansible.builtin.user:
     name: "{{ ansible_fqdn }}"
   register: remote_user_info
@@ -98,6 +99,7 @@
   ansible.builtin.lineinfile:
     path: "{{ remote_user_info.home }}/.ssh/authorized_keys"
     line: "{{ sshpubkey['content'] | b64decode }}"
+    create: true
   when: borgmatic_push_public_key
 
 - name: Pulling SSH host key from the backup server
